@@ -15,9 +15,10 @@
 
 namespace adc64_info
 {
-const Int_t Nchannels = 10;
-const Int_t kNoBins = 100;
+const Int_t Nchannels = 12;
+const Int_t kNoBins = 500;
 const Double_t kHistoWeight = 1.;
+const TString kOutDirName[] = {TString("Nominal"), TString("Cut"), TString("Correlations"), TString("CutCorrelations")};
 } // namespace adc64_info
 
 using namespace adc64_info;
@@ -33,6 +34,8 @@ public:
   virtual void Init(TTree *tree);
   virtual void Show(Long64_t entry = -1);
   virtual void WriteHist();
+  virtual void SetCorrelations() { isSetCorrelations = true; };
+  virtual void InitHist();
 
 private:
   TTree *fChain;  //!pointer to the analyzed TTree or TChain
@@ -42,22 +45,24 @@ private:
 
   // Declaration of leaf types
 
-  Int_t channel_integral_in_gate[Nchannels];
-  Float_t channel_mean_in_gate[Nchannels];
-  Float_t channel_mean_out_gate[Nchannels];
-  Float_t channel_RMS_in_gate[Nchannels];
-  Float_t channel_RMS_out_gate[Nchannels];
-  Float_t channel_zero_level[Nchannels];
-  Float_t channel_zero_level_RMS[Nchannels];
-  Float_t channel_time_cross[Nchannels];
-  Float_t channel_time_half[Nchannels];
-  Short_t channel_MAX_in_gate[Nchannels];
-  Short_t channel_MIN_in_gate[Nchannels];
-  Short_t channel_MAX_out_gate[Nchannels];
-  Short_t channel_MIN_out_gate[Nchannels];
-  UShort_t channel_time_max_in_gate[Nchannels];
-  UShort_t channel_time_min_in_gate[Nchannels];
-  ULong64_t channel_iEvt[Nchannels];
+  std::vector<Int_t> channel_integral_in_gate;
+  std::vector<Float_t> channel_mean_in_gate;
+  std::vector<Float_t> channel_mean_out_gate;
+  std::vector<Float_t> channel_RMS_in_gate;
+  std::vector<Float_t> channel_RMS_out_gate;
+  std::vector<Float_t> channel_zero_level;
+  std::vector<Float_t> channel_zero_level_RMS;
+  std::vector<Float_t> channel_time_cross;
+  std::vector<Float_t> channel_time_half;
+  std::vector<Short_t> channel_MAX_in_gate;
+  std::vector<Short_t> channel_MIN_in_gate;
+  std::vector<Short_t> channel_MAX_out_gate;
+  std::vector<Short_t> channel_MIN_out_gate;
+  std::vector<UShort_t> channel_time_max_in_gate;
+  std::vector<UShort_t> channel_time_min_in_gate;
+  std::vector<ULong64_t> channel_iEvt;
+
+  Bool_t isSetCorrelations;
 
   Int_t channel_0_integral_in_gate;
   Float_t channel_0_mean_in_gate;
@@ -266,6 +271,8 @@ private:
 
   std::map<TString, TH1D *> th1Data;
   std::map<TString, TH1D *> th1CutData;
+  std::map<TString, TH2D *> th2Data;
+  std::map<TString, TH2D *> th2CutData;
   TFile *outFile;
 
   // List of branches
@@ -286,7 +293,6 @@ private:
 
   virtual Int_t Cut(Long64_t entry, Int_t _iChannel);
   virtual Bool_t Notify();
-  virtual void InitHist();
   virtual void adcGetEntry(Int_t entry);
   ClassDef(adc64_data, 0);
 };
@@ -332,7 +338,12 @@ adc64_data::~adc64_data()
   {
     delete it->second;
   }
-  th1CutData.clear();
+  th2Data.clear();
+  for (auto it = th2Data.begin(); it != th2Data.end(); it++)
+  {
+    delete it->second;
+  }
+  th2Data.clear();
   if (outFile->IsOpen())
   {
     outFile->Close();
@@ -379,6 +390,10 @@ void adc64_data::Init(TTree *tree)
   fCurrent = -1;
   fChain->SetMakeClass(1);
   th1Data.clear();
+  th1CutData.clear();
+  th2Data.clear();
+  th2CutData.clear();
+  isSetCorrelations = false;
 
   fChain->SetBranchAddress("channel_0", &channel_0_integral_in_gate, &b_channel_0);
   fChain->SetBranchAddress("channel_1", &channel_1_integral_in_gate, &b_channel_1);
@@ -394,7 +409,7 @@ void adc64_data::Init(TTree *tree)
   fChain->SetBranchAddress("channel_11", &channel_11_integral_in_gate, &b_channel_11);
   fChain->SetBranchAddress("log_data_1", &log_data_1_timestamp, &b_log_data_1);
   fChain->SetBranchAddress("log_data_2", &log_data_2_timestamp, &b_log_data_2);
-  InitHist();
+  // InitHist();
   Notify();
 }
 

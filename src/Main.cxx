@@ -55,6 +55,8 @@ int main(int argc, char **argv)
   inFile->GetObject("adc64_data", tree);
 
   adc64_data *adc = new adc64_data(tree, outFileName);
+  adc->SetCorrelations();
+  adc->InitHist();
   adc->Loop();
   adc->WriteHist();
 
