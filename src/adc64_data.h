@@ -294,6 +294,8 @@ private:
   virtual Int_t Cut(Long64_t entry, Int_t _iChannel);
   virtual Bool_t Notify();
   virtual void adcGetEntry(Int_t entry);
+  virtual Int_t GetPSDEnergy();
+  virtual Double_t GetPSDCalibratedEnergy();
   ClassDef(adc64_data, 0);
 };
 
@@ -316,12 +318,12 @@ adc64_data::adc64_data(TTree *tree, TString _outFileName) : fChain(0)
   if (_outFileName.Sizeof() != 1)
   {
     outFile = new TFile(_outFileName.Data(), "recreate");
+    Init(tree);
   }
   else
   {
     std::cerr << "adc64_data::adc64_data: no name for output file." << std::endl;
   }
-  Init(tree);
 }
 
 adc64_data::~adc64_data()
@@ -338,12 +340,17 @@ adc64_data::~adc64_data()
   {
     delete it->second;
   }
-  th2Data.clear();
+  th1CutData.clear();
   for (auto it = th2Data.begin(); it != th2Data.end(); it++)
   {
     delete it->second;
   }
   th2Data.clear();
+  for (auto it = th2CutData.begin(); it != th2CutData.end(); it++)
+  {
+    delete it->second;
+  }
+  th2CutData.clear();
   if (outFile->IsOpen())
   {
     outFile->Close();
